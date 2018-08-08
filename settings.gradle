@@ -1,0 +1,5 @@
+rootProject.name = 'foxy-neural'
+include 'matrix'
+include 'foxy'
+include 'foxy-sample'
+
