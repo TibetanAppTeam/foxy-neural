@@ -14,5 +14,7 @@ gradle-app.setting
 # gradle/wrapper/gradle-wrapper.properties
 */out/
 
+*.iml
+
 .idea
 .DS_Store

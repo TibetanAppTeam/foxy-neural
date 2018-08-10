@@ -1,59 +1,118 @@
 package com.tibetanapp.foxyneural.matrix;
 
-import org.junit.Assert;
 import org.junit.Test;
 
 import java.math.BigDecimal;
 
-import static java.math.BigDecimal.ONE;
-import static java.math.BigDecimal.ZERO;
-import static java.math.BigDecimal.valueOf;
+import static java.math.BigDecimal.*;
+import static org.junit.Assert.assertArrayEquals;
+import static org.junit.Assert.assertEquals;
 
 /**
  * Created by Tsvetan Ovedenski on 08/08/2018.
  */
+@SuppressWarnings("UnnecessaryLocalVariable")
 public class MatrixTest {
 
-    @Test(expected = AssertionError.class)
+    @Test(expected = IllegalArgumentException.class)
     public void testEyeNegativeSize_throws() {
         Matrix.eye(-1);
     }
 
+    @Test(expected = IllegalArgumentException.class)
+    public void testReplicateNegativeSize() {
+        Matrix.replicate(-1, 1, ONE);
+    }
+
+    @Test
+    public void testOnes() {
+        final BigDecimal[][] result = Matrix.ones(2, 3).toArray();
+        final BigDecimal[][] expected = new BigDecimal[][] {{ONE, ONE, ONE}, {ONE, ONE, ONE}};
+        assertArrayEquals(expected, result);
+    }
+
+    @Test
+    public void testReplicate() {
+        final BigDecimal value = TEN;
+        final BigDecimal[][] result = Matrix.replicate(3, 2, value).toArray();
+        final BigDecimal[][] expected = new BigDecimal[][] {{value, value}, {value, value}, {value, value}};
+        assertArrayEquals(expected, result);
+    }
+
     @Test
     public void testEye1() {
-        final BigDecimal arr = Matrix.eye(1).toScalar();
+        final BigDecimal result = Matrix.eye(1).toScalar();
         final BigDecimal expected = ONE;
-        Assert.assertEquals(expected, arr);
+        assertEquals(expected, result);
     }
+
     @Test
     public void testEye2() {
-        final BigDecimal[][] arr = Matrix.eye(2).toArray();
+        final BigDecimal[][] result = Matrix.eye(2).toArray();
         final BigDecimal[][] expected = {{ONE, ZERO}, {ZERO, ONE}};
-        Assert.assertArrayEquals(expected, arr);
+        assertArrayEquals(expected, result);
+    }
+
+    @Test
+    public void testEye3() {
+        final BigDecimal[][] result = Matrix.eye(3).toArray();
+        final BigDecimal[][] expected = {{ONE, ZERO, ZERO}, {ZERO, ONE, ZERO}, {ZERO, ZERO, ONE}};
+        assertArrayEquals(expected, result);
+    }
+
+    @Test
+    public void testMult_number() {
+        final Integer[][] a = new Integer[][]{
+                {1, 2, 3},
+                {4, 5, 6}};
+
+        final Integer b = 10;
+
+        final Integer[][] expected = new Integer[][] {
+                {10, 20, 30},
+                {40, 50, 60}};
+
+        assertMatrixTimesNumber(a, b, expected);
     }
 
     @Test
     public void testMult_matrix() {
-        final BigDecimal[][] arr1 = {
-                {v(1), v(2), v(3)},
-                {v(4), v(5), v(6)}};
-        final Matrix m1 = new Matrix(arr1);
+        final Integer[][] a = new Integer[][] {
+                {1, 2, 3},
+                {4, 5, 6}};
 
-        final BigDecimal[][] arr2 = {
-                {v(1), v(2)},
-                {v(3), v(4)},
-                {v(5), v(6)}};
-        final Matrix m2 = new Matrix(arr2);
+        final Integer[][] b = new Integer[][] {
+                {1, 2},
+                {3, 4},
+                {5, 6}};
 
-        final BigDecimal[][] result = m1.multiply(m2).toArray();
-        final BigDecimal[][] exp = {
-                {v(22), v(28)},
-                {v(49), v(64)}};
+        final Integer[][] expected = new Integer[][] {
+                {22, 28},
+                {49, 64}};
 
-        Assert.assertArrayEquals(exp, result);
+        assertMatrixTimesMatrix(a, b, expected);
     }
 
-    private BigDecimal v(long val) {
-        return valueOf(val);
+    private void assertMatrixTimesNumber(Integer[][] a, Integer b, Integer[][] c) {
+        final Matrix m1 = Matrix.of(createArray(a));
+
+        final BigDecimal[][] result = m1.multiply(BigDecimal.valueOf(b)).toArray();
+        final BigDecimal[][] expected = Matrix.of(createArray(c)).toArray();
+
+        assertArrayEquals(expected, result);
+    }
+
+    private void assertMatrixTimesMatrix(Integer[][] a, Integer[][] b, Integer[][] c) {
+        final Matrix m1 = Matrix.of(createArray(a));
+        final Matrix m2 = Matrix.of(createArray(b));
+
+        final BigDecimal[][] result = m1.multiply(m2).toArray();
+        final BigDecimal[][] expected = Matrix.of(createArray(c)).toArray();
+
+        assertArrayEquals(expected, result);
+    }
+
+    private Array2D<Integer> createArray(Integer[][] array) {
+        return Array2D.of(array);
     }
 }
