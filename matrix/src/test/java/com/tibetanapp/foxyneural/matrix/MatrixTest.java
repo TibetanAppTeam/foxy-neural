@@ -19,6 +19,11 @@ public class MatrixTest {
         Matrix.eye(-1);
     }
 
+    @Test(expected = IllegalArgumentException.class)
+    public void testReplicateNegativeSize() {
+        Matrix.replicate(-1, 1, ONE);
+    }
+
     @Test
     public void testOnes() {
         final BigDecimal[][] result = Matrix.ones(2, 3).toArray();
@@ -28,8 +33,9 @@ public class MatrixTest {
 
     @Test
     public void testReplicate() {
-        final BigDecimal[][] result = Matrix.replicate(3, 2, TEN).toArray();
-        final BigDecimal[][] expected = new BigDecimal[][] {{TEN, TEN}, {TEN, TEN}, {TEN, TEN}};
+        final BigDecimal value = TEN;
+        final BigDecimal[][] result = Matrix.replicate(3, 2, value).toArray();
+        final BigDecimal[][] expected = new BigDecimal[][] {{value, value}, {value, value}, {value, value}};
         assertArrayEquals(expected, result);
     }
 
@@ -39,10 +45,18 @@ public class MatrixTest {
         final BigDecimal expected = ONE;
         assertEquals(expected, result);
     }
+
     @Test
     public void testEye2() {
         final BigDecimal[][] result = Matrix.eye(2).toArray();
         final BigDecimal[][] expected = {{ONE, ZERO}, {ZERO, ONE}};
+        assertArrayEquals(expected, result);
+    }
+
+    @Test
+    public void testEye3() {
+        final BigDecimal[][] result = Matrix.eye(3).toArray();
+        final BigDecimal[][] expected = {{ONE, ZERO, ZERO}, {ZERO, ONE, ZERO}, {ZERO, ZERO, ONE}};
         assertArrayEquals(expected, result);
     }
 

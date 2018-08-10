@@ -44,10 +44,9 @@ public class Matrix {
         final int newCols = other.cols;
         BigDecimal[][] arr = new BigDecimal[newRows][newCols];
 
-        final List<List<Pair<BigDecimal, BigDecimal>>> lists = zip(other);
-        final List<BigDecimal> list = lists.stream()
-                .map(ls -> ls.stream()
-                        .map(l -> l.squash(BigDecimal::multiply))
+        final List<BigDecimal> list = zip(other).parallelStream()
+                .map(xs -> xs.stream()
+                        .map(x -> x.squash(BigDecimal::multiply))
                         .reduce(BigDecimal.ZERO, BigDecimal::add))
                 .collect(Collectors.toList());
 
@@ -64,17 +63,25 @@ public class Matrix {
     private List<List<Pair<BigDecimal, BigDecimal>>> zip(Matrix other) {
         final int total = Math.min(rows, other.cols);
 
-        final List<List<Pair<BigDecimal, BigDecimal>>> out = new ArrayList<>();
+//        New way:
+        return IntStream
+                .range(0, total)
+                .mapToObj(i -> new Pair<>(i, IntStream.range(0, total)))
+                .flatMap(p -> p.snd().mapToObj(j -> Functional.zip(matrix.row(p.fst()), other.matrix.col(j))))
+                .collect(Collectors.toList());
 
-        for (int i = 0; i < total; i++) {
-            final List<BigDecimal> as = matrix.row(i);
-            for (int j = 0; j < total; j++) {
-                final List<BigDecimal> bs = other.matrix.col(j);
-                out.add(Functional.zip(as, bs));
-            }
-        }
-
-        return out;
+//        Old way:
+//        final List<List<Pair<BigDecimal, BigDecimal>>> out = new ArrayList<>();
+//
+//        for (int i = 0; i < total; i++) {
+//            final List<BigDecimal> as = matrix.row(i);
+//            for (int j = 0; j < total; j++) {
+//                final List<BigDecimal> bs = other.matrix.col(j);
+//                out.add(Functional.zip(as, bs));
+//            }
+//        }
+//
+//        return out;
     }
 
     public BigDecimal[][] toArray() {
@@ -109,6 +116,9 @@ public class Matrix {
     }
 
     static Matrix replicate(int rows, int cols, BigDecimal value) {
+        Arguments.checkThat(rows > 0, "zero or negative rows size");
+        Arguments.checkThat(cols > 0, "zero or negative cols size");
+
         final BigDecimal[][] arr = new BigDecimal[rows][cols];
         mapMutable(arr, v -> value);
         return new Matrix(arr);
