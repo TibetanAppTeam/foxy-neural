@@ -3,9 +3,11 @@ package com.tibetanapp.foxyneural.matrix;
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.Function;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
-import static com.tibetanapp.foxyneural.matrix.Utils.map;
+import static com.tibetanapp.foxyneural.matrix.Functional.mapMutable;
 
 /**
  * Created by Tsvetan Ovedenski on 08/08/2018.
@@ -13,48 +15,46 @@ import static com.tibetanapp.foxyneural.matrix.Utils.map;
 public class Matrix {
     private int rows;
     private int cols;
-    private BigDecimal[][] matrix;
+    private Array2D<BigDecimal> matrix;
 
-    public Matrix(BigDecimal[][] matrix) {
-        this.rows = matrix.length;
-
-        assert this.rows > 0;
-        this.cols = matrix[0].length;
-        this.matrix = matrix.clone();
+    private Matrix(BigDecimal[][] matrix) {
+        this(Array2D.of(matrix));
     }
 
-    public void printSize() {
-        System.out.println("Size: " + rows + "X" + cols);
+    private Matrix(Array2D<BigDecimal> matrix) {
+        this.matrix = matrix;
+
+        this.rows = this.matrix.size().fst();
+        Arguments.checkThat(this.rows > 0, "rows is less than 1");
+
+        this.cols = this.matrix.size().snd();
+        Arguments.checkThat(this.cols > 0, "cols is less than 1");
     }
 
     public Matrix multiply(BigDecimal value) {
-        final Matrix result = new Matrix(this.matrix);
-        map(result.matrix, (v) -> v.multiply(value));
+        final Matrix result = of(this);
+        result.matrix = result.matrix.map(v -> v.multiply(value));
         return result;
     }
 
     public Matrix multiply(Matrix other) {
-        if (cols != other.rows) {
-            throw new IllegalArgumentException("Sizes mismatch");
-        }
+        Arguments.checkThat(cols == other.rows, "sizes mismatch");
 
         final int newRows = rows;
         final int newCols = other.cols;
         BigDecimal[][] arr = new BigDecimal[newRows][newCols];
 
         final List<List<Pair<BigDecimal, BigDecimal>>> lists = zip(other);
-        System.out.println(lists);
-        final BigDecimal[] list = lists.stream()
+        final List<BigDecimal> list = lists.stream()
                 .map(ls -> ls.stream()
                         .map(l -> l.squash(BigDecimal::multiply))
                         .reduce(BigDecimal.ZERO, BigDecimal::add))
-                .collect(Collectors.toList()).toArray(new BigDecimal[] {});
-        System.out.println(list.length);
+                .collect(Collectors.toList());
 
         for (int r = 0; r < newRows; r++) {
             for (int c = 0; c < newCols; c++) {
-                final int i = c * newRows + r;
-                arr[r][c] = list[i];
+                final int i = r * newRows + c;
+                arr[r][c] = list.get(i);
             }
         }
 
@@ -62,30 +62,30 @@ public class Matrix {
     }
 
     private List<List<Pair<BigDecimal, BigDecimal>>> zip(Matrix other) {
-        int minRow = Math.min(rows, other.cols);
-        int minCol = Math.max(cols, other.rows);
+        final int total = Math.min(rows, other.cols);
 
-        final List<List<Pair<BigDecimal, BigDecimal>>> list = new ArrayList<>();
-        for (int r = 0; r < minRow; r++) {
-            final List<Pair<BigDecimal, BigDecimal>> buffer = new ArrayList<>();
-            for (int c = 0; c < minCol; c++) {
-                final Pair<BigDecimal, BigDecimal> p = new Pair<>(matrix[r][c], other.matrix[c][r]);
-                buffer.add(p);
+        final List<List<Pair<BigDecimal, BigDecimal>>> out = new ArrayList<>();
+
+        for (int i = 0; i < total; i++) {
+            final List<BigDecimal> as = matrix.row(i);
+            for (int j = 0; j < total; j++) {
+                final List<BigDecimal> bs = other.matrix.col(j);
+                out.add(Functional.zip(as, bs));
             }
-            list.add(buffer);
         }
-        return list;
+
+        return out;
     }
 
     public BigDecimal[][] toArray() {
-        return matrix.clone();
+        return matrix.toArray(new BigDecimal[rows][cols]);
     }
 
     public BigDecimal toScalar() {
         if (rows > 1 || cols > 1) {
             throw new RuntimeException("Scalar from matrix with many rows/cols");
         }
-        return matrix[0][0];
+        return matrix.get(0, 0);
     }
 
     static Matrix zeros(int rows, int cols) {
@@ -97,17 +97,36 @@ public class Matrix {
     }
 
     static Matrix eye(int size) {
-        assert size > 0;
+        Arguments.checkThat(size > 0, "size is less than 1");
+
         final Matrix matrix = zeros(size, size);
+
         for (int i = 0; i < size; i++) {
-            matrix.matrix[i][i] = BigDecimal.ONE;
+            matrix.matrix.set(i, i, BigDecimal.ONE);
         }
+
         return matrix;
     }
 
     static Matrix replicate(int rows, int cols, BigDecimal value) {
         final BigDecimal[][] arr = new BigDecimal[rows][cols];
-        map(arr, v -> BigDecimal.ZERO);
+        mapMutable(arr, v -> value);
         return new Matrix(arr);
+    }
+
+    static Matrix of(BigDecimal[][] matrix) {
+        return new Matrix(matrix.clone());
+    }
+
+    static <T> Matrix of(Array2D<T> array, Function<T, BigDecimal> mapper) {
+        return new Matrix(array.map(mapper));
+    }
+
+    static Matrix of(Array2D<Integer> array) {
+        return of(array, BigDecimal::new);
+    }
+
+    static Matrix of(Matrix other) {
+        return of(other.toArray());
     }
 }
